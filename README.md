@@ -144,7 +144,7 @@ Azure services provisioned via `azd up`:
 ### Deploy to Azure
 
 ```bash
-git clone https://github.com/kmavrodis/kratos-agent && cd kratos-agent
+git clone https://github.com/aiappsgbb/kratos-agent && cd kratos-agent
 azd up
 ```
 
@@ -173,14 +173,15 @@ This is the only manual step. Traces appear automatically: the deployment connec
 
 ### Validating a Deployment
 
-The repo ships a Playwright-based smoke skill at `.copilot/skills/e2e-smoke/` that asserts the **23 critical surfaces** (health, scenarios, chat, evals, traces, UI, regression, interactive UX) of a deployed instance in ~66s. After every deploy:
+The repo ships a Playwright-based smoke skill at `.copilot/skills/e2e-smoke/` that asserts the **21 critical surfaces** (health, scenarios, chat, evals, traces, UI, regression, interactive UX) of a deployed instance in ~55s. After every deploy:
 
 ```bash
 cd .copilot/skills/e2e-smoke
-KRATOS_BACKEND_URL="https://<your-backend>.azurecontainerapps.io" \
-KRATOS_FRONTEND_URL="https://<your-frontend>.azurestaticapps.net" \
-./run.sh
+./run.sh                 # resolves the target from the selected azd environment
+SKIP_BROWSER=1 ./run.sh  # API-only, skips the Chromium download
 ```
+
+`run.sh` reads `AZURE_STATIC_WEB_APP_URL` and `AGENT_SERVICE_URL` from `azd env get-values`, so it always follows whichever environment is currently selected. Override with `KRATOS_FRONTEND_URL` / `KRATOS_BACKEND_URL` to point it elsewhere. It fails fast rather than falling back to a stale default.
 
 See [`.copilot/skills/e2e-smoke/SKILL.md`](./.copilot/skills/e2e-smoke/SKILL.md) for the spec catalogue, env-var reference, and tips for running just the API or just the UX project.
 
@@ -473,12 +474,12 @@ Local/blob skills always win on name conflict with APM packages.
 ### Adding a Custom Skill
 
 1. Create `use-cases/{use-case}/skills/my-skill/SKILL.md`
-2. Upload to blob storage via the admin API: `POST /api/admin/skills/{use-case}/my-skill`
+2. Upload to blob storage via the admin API: `POST /api/admin/skills?use_case={use-case}`
 3. The skill is available immediately — no redeploy needed
 
 ### MCP Servers
 
-External MCP servers (e.g., `faker-mcp-server`) are configured per use case via `use-cases/{use-case}/.mcp.json` and managed through the admin API at `/api/admin/mcp-servers/{use-case}`.
+External MCP servers (e.g., `faker-mcp-server`) are configured per use case via `use-cases/{use-case}/.mcp.json` and managed through the admin API at `/api/admin/mcp-servers?use_case={use-case}`.
 
 ---
 
@@ -674,6 +675,13 @@ python scripts/fetch_traces.py --conversation-id abc123
 kratos-agent/
 ├── azure.yaml                      # azd config: 4 services (agent-service, hosted-agent, obo-mcp-server, web)
 ├── docker-compose.yml              # Local dev: backend + hosted-agent + obo-mcp-server + azurite
+├── AGENTS.md                       # Working agreements for AI agents (public-repo rules, validation)
+│
+├── .github/
+│   ├── workflows/
+│   │   ├── ci-cd.yml               # CI only: lint, test, build. Does NOT deploy.
+│   │   └── deploy.yml              # Manual (workflow_dispatch) deploy to staging/production
+│   └── dependabot.yml              # Grouped security + minor/patch updates for pip and npm
 │
 ├── infra/                          # Bicep IaC (18 modules)
 │   ├── main.bicep
@@ -782,11 +790,18 @@ kratos-agent/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET/POST/PUT/DELETE` | `/api/admin/skills/{use-case}/*` | Skill CRUD |
-| `GET/PUT` | `/api/admin/system-prompt/{use-case}` | System prompt management |
-| `GET/POST/DELETE` | `/api/admin/use-cases/{uc}/apm/*` | APM dependency management |
-| `GET/PUT` | `/api/admin/mcp-servers/{use-case}` | MCP server configuration |
-| `POST` | `/api/admin/analysis` | Use-case consistency analysis |
+| `GET/POST` | `/api/admin/skills?use_case=` | List / create skills |
+| `GET/PATCH/DELETE` | `/api/admin/skills/{skill_name}` | Read, update, delete a skill |
+| `GET` | `/api/admin/skills/{skill_name}/files` | List a skill's files |
+| `PUT/DELETE` | `/api/admin/skills/{skill_name}/files/{file_path}` | Write / delete a skill file |
+| `GET/PUT/DELETE` | `/api/admin/system-prompt?use_case=` | System prompt management |
+| `GET/PUT` | `/api/admin/mcp-servers?use_case=` | MCP server configuration |
+| `GET/POST/DELETE` | `/api/admin/use-cases/{use_case}/apm/*` | APM dependency management |
+| `POST` | `/api/admin/analysis/consistency` | Use-case consistency analysis |
+| `POST` | `/api/admin/analysis/apply-fix` | Apply a suggested consistency fix |
+
+> `use_case` is a **query** parameter on the skills, system-prompt, and
+> mcp-servers routes — it is not a path segment.
 
 ### Copilot Studio
 
@@ -917,18 +932,20 @@ done
 
 RBAC propagation takes 5–15 min. Re-run the e2e-smoke skill to confirm.
 
-### `hooks/postdeploy.sh` blocks CI
+### `hooks/postdeploy.sh` and non-interactive deploys
 
-**Symptom:** `azd up` hangs at the postdeploy step waiting for input.
+**Symptom:** `azd deploy` used to fail (or hang) at the postdeploy step, even though the app itself uploaded fine.
 
-**Cause:** The script prompts for which use-cases to upload to blob storage.
+**Cause:** The script prompts for which use-cases to upload to blob storage. With no TTY the `read` fails under `set -e` and takes the whole deploy down with it.
 
-**Fix:** Set `KRATOS_AUTO_UPLOAD_USE_CASES=1` in the environment before running `azd up` / `azd deploy`. The script will upload **all** use-cases non-interactively. Local devs without the flag get the interactive prompt as before.
+**Fix:** The script now detects a missing TTY and skips the upload instead of failing. To upload non-interactively, set `KRATOS_AUTO_UPLOAD_USE_CASES=1` — it then uploads **all** use-cases. With a TTY and no flag you still get the interactive prompt.
 
 ```bash
 export KRATOS_AUTO_UPLOAD_USE_CASES=1
 azd up
 ```
+
+> The skills storage account is provisioned with `publicNetworkAccess: Disabled`, so the upload only works from inside the VNet or from an allow-listed IP. Setting the flag on a GitHub-hosted runner will fail — which is why CI leaves it unset and the deploy workflow exposes it as an opt-in input.
 
 ---
 
