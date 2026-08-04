@@ -47,6 +47,12 @@ services:
         project: ./src/obo-mcp-server
         host: containerapp
         language: python
+        # infra/main.bicep only creates this container app when deployObo is
+        # true, and main.parameters.json feeds that from the same DEPLOY_OBO
+        # value with the same default. Without this condition azd tries to
+        # deploy a service that was deliberately never provisioned, so
+        # `azd up` always failed on environments with OBO turned off.
+        condition: ${DEPLOY_OBO=true}
         docker:
             path: ./Dockerfile
             remoteBuild: true

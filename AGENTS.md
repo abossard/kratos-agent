@@ -103,6 +103,38 @@ Gotchas that have bitten before:
   `hooks/postdeploy.sh` skips the upload when there is no TTY.
 - Never use `|| true` on a test that is meant to gate a release.
 
+## Container images build in ACR, not locally
+
+All three container services set `remoteBuild: true` under `docker:` in
+`azure.yaml`. Their images install from pypi and the npm registry at build
+time, and some corporate networks filter `files.pythonhosted.org` and
+`registry.npmjs.org`, which makes a local `docker build` impossible. Building
+in ACR sidesteps that and means deploying needs no local Docker daemon.
+
+Do not "simplify" this back to local builds.
+
+## Optional services need a `condition:`
+
+`obo-mcp-server` is only provisioned when `deployObo` is true, so `azure.yaml`
+gives it `condition: ${DEPLOY_OBO=true}` — the same variable and the same
+default that `infra/main.parameters.json` feeds to Bicep. Keep those two in
+sync. Without the condition, `azd up` fails on any environment with OBO off,
+because azd tries to deploy a resource that was deliberately never created.
+
+`condition:` needs azd >= 1.28.
+
+## CI builds every image
+
+`ci-cd.yml` builds all three Dockerfiles. This is deliberate: it used to build
+only the backend, which let a dependency bump reach `main` with an
+unresolvable `requirements.txt` (`pydantic` pins `pydantic-core` to an exact
+version; they were bumped separately). Nothing caught it until a real deploy
+failed.
+
+Packages that pin each other exactly — `pydantic`/`pydantic-core`,
+`react`/`react-dom` — must be grouped in `.github/dependabot.yml` so they are
+never bumped apart. Both pairs have already broken this repo once.
+
 ## Conventions
 
 - Python: `ruff` for lint and format; `mypy` is configured.
