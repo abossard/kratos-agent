@@ -1,0 +1,78 @@
+version: 2
+
+# Dependabot was raising security alerts for this repo but had no config, so it
+# never opened update PRs and ~100 advisories accumulated. Grouped updates keep
+# the PR volume manageable while still moving lockfiles forward.
+#
+# This also covers the Python side, which cannot be resolved from restricted
+# networks that block files.pythonhosted.org -- Dependabot resolves on GitHub's
+# runners instead.
+
+updates:
+  # --- Python -------------------------------------------------------------
+  - package-ecosystem: pip
+    directory: /src/backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      backend-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      backend-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+    labels: [dependencies, python]
+
+  - package-ecosystem: pip
+    directory: /src/obo-mcp-server
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      obo-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      obo-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+    labels: [dependencies, python]
+
+  # --- JavaScript ---------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /src/frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      frontend-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      frontend-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+    labels: [dependencies, javascript]
+
+  - package-ecosystem: npm
+    directory: /mocks
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      mocks-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      mocks-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+    labels: [dependencies, javascript]
+
+  # --- CI -----------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [dependencies, ci]
