@@ -5,11 +5,11 @@
 **Production-ready reference architecture for building extensible AI agents on Azure**
 
 [![Azure](https://img.shields.io/badge/Azure-Deployable-0078D4?logo=microsoftazure&logoColor=white)](https://portal.azure.com)
-[![GitHub Copilot SDK](https://img.shields.io/badge/Copilot_SDK-0.1.32-000?logo=github)](https://github.com/features/copilot)
+[![GitHub Copilot SDK](https://img.shields.io/badge/Copilot_SDK-1.0.0-000?logo=github)](https://github.com/features/copilot)
 [![Microsoft Foundry](https://img.shields.io/badge/Microsoft_Foundry-Hosted_Agent-6B2FA0?logo=microsoft)](https://ai.azure.com)
 [![MCP](https://img.shields.io/badge/MCP-Skills_Protocol-FF6B35)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Next.js](https://img.shields.io/badge/Next.js-14-000?logo=nextdotjs)](https://nextjs.org)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000?logo=nextdotjs)](https://nextjs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 One-command deploy (`azd up`) provisions Azure services, builds containers, deploys a hosted agent to Microsoft Foundry, and serves a production frontend — all wired with Managed Identity, VNet isolation, and OpenTelemetry tracing. The agent calls Foundry models **directly** (no API Management gateway) and ships an **Entra On-Behalf-Of** MCP server that calls Microsoft Graph as the signed-in user.
@@ -87,7 +87,7 @@ The backend proxies all chat requests to the Foundry hosted agent via the Invoca
 
 | Pillar | Technology | Role |
 |--------|------------|------|
-| **Engine** | [GitHub Copilot SDK](https://github.com/features/copilot) `0.1.32` | Agentic loop — Plan → Act → Observe → Iterate |
+| **Engine** | [GitHub Copilot SDK](https://github.com/features/copilot) `1.0.0` | Agentic loop — Plan → Act → Observe → Iterate |
 | **Platform** | [Microsoft Foundry](https://ai.azure.com) | Hosted agent lifecycle, model hosting, evaluation, guardrails |
 | **Extensibility** | [MCP Skills Protocol](https://modelcontextprotocol.io) | Portable, standard tool interface for agent capabilities |
 | **Persistence** | [Azure Cosmos DB](https://learn.microsoft.com/azure/cosmos-db/) | Conversations, messages, settings, session mappings |
@@ -103,7 +103,7 @@ The backend proxies all chat requests to the Foundry hosted agent via the Invoca
 |-----------|-----------|---------|
 | Language | Python | 3.11 |
 | Web framework | FastAPI + uvicorn | ≥0.115 |
-| Agent SDK | `github-copilot-sdk` | 0.1.32 |
+| Agent SDK | `github-copilot-sdk` | 1.0.0 |
 | Agent runtime | Copilot CLI (`@github/copilot`) | latest |
 | Hosted agent protocol | `azure-ai-agentserver-invocations` | ≥1.0.0b3 |
 | Database | Azure Cosmos DB (serverless) / SQLite (local) | — |
@@ -117,10 +117,10 @@ The backend proxies all chat requests to the Foundry hosted agent via the Invoca
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
-| Framework | Next.js (static export) | 14 |
+| Framework | Next.js (static export) | 15 |
 | UI | React + Tailwind CSS | 18 / 3.4 |
 | Auth | MSAL (Azure AD) | 3.20 |
-| Markdown | react-markdown + remark-gfm | 9.0 |
+| Markdown | react-markdown + remark-gfm | 9.0 / 4.0 |
 | Hosting | Azure Static Web Apps | — |
 
 ### Infrastructure (Bicep)
