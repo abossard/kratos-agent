@@ -14,6 +14,11 @@ services:
         docker:
             path: ./Dockerfile
             context: ../..
+            # Build in ACR rather than locally. The image installs Python
+            # packages, so a local build needs files.pythonhosted.org — which
+            # is blocked on some corporate networks. Building remotely also
+            # avoids needing a working Docker daemon to deploy.
+            remoteBuild: true
     kratos-agent:
         project: ./src/hosted-agent
         host: azure.ai.agent
@@ -21,6 +26,7 @@ services:
         docker:
             path: ./Dockerfile
             context: ../..
+            remoteBuild: true
         config:
             container:
                 resources:
@@ -43,6 +49,7 @@ services:
         language: python
         docker:
             path: ./Dockerfile
+            remoteBuild: true
     web:
         project: ./src/frontend
         host: staticwebapp
