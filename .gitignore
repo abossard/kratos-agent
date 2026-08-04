@@ -61,6 +61,10 @@ secrets/
 # MCP
 .playwright-mcp/
 
+# Playwright output from the root-level e2e runs
+test-results/
+playwright-report/
+
 # Build artifacts that should not be committed
 *.egg-info/
 infra/main.json

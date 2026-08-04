@@ -9,7 +9,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Layer 2: Global npm packages (pinned for reproducibility) ──
+# ── Layer 2: Global npm packages (Copilot CLI + Faker MCP) ──
+# These intentionally track @latest and are NOT pinned, so two builds of the
+# same commit can produce different images. Pinning is preferable, but must be
+# done from a machine that can see the real npm registry.
 RUN npm install -g @github/copilot@latest faker-mcp-server@latest \
     && rm -rf /root/.npm /tmp/*
 
