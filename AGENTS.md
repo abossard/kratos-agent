@@ -76,6 +76,33 @@ SKIP_BROWSER=1 ./run.sh                           # API-only, no chromium
 so it always follows whichever env is active. See its `SKILL.md` for details.
 First run installs npm deps and Chromium (cached afterwards).
 
+## Deployment is manual, never automatic
+
+`.github/workflows/ci-cd.yml` runs lint/test/build only. It does **not** deploy.
+Deployment lives in `.github/workflows/deploy.yml` and is `workflow_dispatch`
+only — pick an environment, optionally provision, optionally upload skills.
+
+Do not re-attach deploy jobs to `push`. A green build does not mean a deploy
+can succeed, because the target environment needs all of:
+
+- environment secrets `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` /
+  `AZURE_SUBSCRIPTION_ID` (OIDC federated credential), and
+- already-provisioned infrastructure for that `azd` env.
+
+As of the last audit only the `kratos-agent-2` env is provisioned; the
+`staging` and `production` envs have no infra and no secrets.
+
+Gotchas that have bitten before:
+
+- `Azure/setup-azd@v1.0.0` installs from `azdrelease.azureedge.net`, which no
+  longer resolves. Use `v2.x`.
+- A fresh runner has no `.azure/` dir, so `azd deploy` needs `azd env
+  select`/`new` **and** `azd env refresh` to hydrate outputs first.
+- The skills blob storage account is `publicNetworkAccess: Disabled`, so
+  `KRATOS_AUTO_UPLOAD_USE_CASES=1` cannot work from a GitHub-hosted runner.
+  `hooks/postdeploy.sh` skips the upload when there is no TTY.
+- Never use `|| true` on a test that is meant to gate a release.
+
 ## Conventions
 
 - Python: `ruff` for lint and format; `mypy` is configured.
