@@ -1,18 +1,27 @@
 /**
  * Shared helpers + env-derived URLs used by every spec.
+ *
+ * No deployment endpoints are hardcoded here — this is a public repo. URLs are
+ * resolved by `run.sh` from the local `azd` environment (`.azure/`, gitignored)
+ * and exported as KRATOS_FRONTEND_URL / KRATOS_BACKEND_URL, or supplied
+ * manually. Missing values fail fast rather than silently targeting a stale env.
  */
-export const FRONTEND_URL =
-  process.env.KRATOS_FRONTEND_URL ||
-  "https://mango-bay-04ed10b03.7.azurestaticapps.net";
+function requiredUrl(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(
+      `${name} is not set. Run this suite via ./run.sh (which resolves endpoints ` +
+        `from 'azd env get-values'), or export ${name} explicitly.`,
+    );
+  }
+  return value.replace(/\/+$/, "");
+}
 
-export const BACKEND_URL =
-  process.env.KRATOS_BACKEND_URL ||
-  "https://ca-agent-jep3w6qugjoda.blacktree-6e513e92.swedencentral.azurecontainerapps.io";
+export const FRONTEND_URL = requiredUrl("KRATOS_FRONTEND_URL");
 
-export const USE_CASES = (
-  process.env.KRATOS_USE_CASES ||
-  "generic,insurance,retail-banking,wealth-management,sales-account-review"
-)
+export const BACKEND_URL = requiredUrl("KRATOS_BACKEND_URL");
+
+export const USE_CASES = (process.env.KRATOS_USE_CASES || "generic")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);

@@ -41,7 +41,7 @@ async function openSkillsAdmin(page: Page) {
 }
 
 test.describe("UX — interactive flows", () => {
-  test("home loads with all 5 use-cases in the persona selector", async ({ page }) => {
+  test("home loads with the configured use-cases in the persona selector", async ({ page }) => {
     await gotoHome(page);
     const persona = page.locator('select[aria-label="Select agent persona"]');
     await expect(persona, "persona <select> visible").toBeVisible();
@@ -56,10 +56,15 @@ test.describe("UX — interactive flows", () => {
   test("switching persona updates the persona selector value", async ({ page }) => {
     await gotoHome(page);
     const persona = page.locator('select[aria-label="Select agent persona"]');
-    await persona.selectOption("insurance");
-    await expect(persona).toHaveValue("insurance");
-    await persona.selectOption("retail-banking");
-    await expect(persona).toHaveValue("retail-banking");
+    await expect(persona).toBeVisible();
+    const optionValues = await persona.locator("option").evaluateAll((opts) =>
+      opts.map((o) => (o as HTMLOptionElement).value).filter(Boolean),
+    );
+    expect(optionValues.length, "at least two personas to switch between").toBeGreaterThan(1);
+    for (const value of optionValues.slice(0, 2)) {
+      await persona.selectOption(value);
+      await expect(persona).toHaveValue(value);
+    }
   });
 
   test("landing textarea + send button triggers a chat and an assistant reply renders", async ({

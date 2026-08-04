@@ -30,22 +30,29 @@ load per use-case, chat round-trips, evals API, and traces API.
 | `04-evals.spec.ts` | `/api/use-cases/{uc}/evals/runs` | At least one completed validation run exists; per-run detail returns scenarios array |
 | `05-traces.spec.ts` | `/api/traces/operations` | ≥1 operation in lookback window; per-operation detail returns spans |
 | `06-ui.spec.ts` | browser | Frontend loads without console errors (smoke gate) |
-| `07-regression.spec.ts` | pre-existing core | `/api/use-cases` schema + all 5 use-cases present, `/api/settings` Foundry config, conversation CRUD round-trip, `/api/admin/skills` catalogue + detail, `/api/admin/system-prompt` content. Guards against regressions in surfaces the evals/tracing branch did NOT touch |
-| `08-ux.spec.ts` | browser, interactive | **The UX itself.** Persona selector lists all 5 use-cases & switches value; landing textarea + Send button starts a chat and the assistant responds; Skills admin opens; every admin tab (Skills / System Prompt / APM / Evals / Traces) renders its header; "Generate Scenarios" modal opens + closes; Traces "Refresh" renders ops/summary/empty-state |
+| `07-regression.spec.ts` | pre-existing core | `/api/use-cases` schema + all curated use-cases present, `/api/settings` Foundry config, conversation CRUD round-trip, `/api/admin/skills` catalogue + detail, `/api/admin/system-prompt` content. Guards against regressions in surfaces the evals/tracing branch did NOT touch |
+| `08-ux.spec.ts` | browser, interactive | **The UX itself.** Persona selector lists the curated use-cases & switches value; landing textarea + Send button starts a chat and the assistant responds; Skills admin opens; every admin tab (Skills / System Prompt / APM / Evals / Traces) renders its header; "Generate Scenarios" modal opens + closes; Traces "Refresh" renders ops/summary/empty-state |
 
 ## Inputs (env vars)
 
 | Var | Default | Purpose |
 |-----|---------|---------|
-| `KRATOS_FRONTEND_URL` | `https://mango-bay-04ed10b03.7.azurestaticapps.net` | SWA URL |
-| `KRATOS_BACKEND_URL` | `https://ca-agent-jep3w6qugjoda.blacktree-6e513e92.swedencentral.azurecontainerapps.io` | Container Apps URL |
-| `KRATOS_USE_CASES` | `generic,insurance,retail-banking,wealth-management,sales-account-review` | Comma-separated |
+| `KRATOS_FRONTEND_URL` | from `azd env` → `AZURE_STATIC_WEB_APP_URL` | SWA URL |
+| `KRATOS_BACKEND_URL` | from `azd env` → `AGENT_SERVICE_URL` | Container Apps URL |
+| `KRATOS_USE_CASES` | curated personas discovered from `/api/use-cases` | Comma-separated |
 | `CHAT_TIMEOUT_MS` | `60000` | Chat round-trip ceiling |
 | `TRACES_LOOKBACK_HOURS` | `6` | App Insights query window |
 | `SKIP_BROWSER` | unset | Set to `1` to skip browser tests (CI / no-chromium hosts) |
 
-The defaults match the **fruocco-2** deployment used by the current pilot;
-point `KRATOS_*_URL` at a different env to retarget.
+**No deployment endpoints are hardcoded in this repo — it is public.** `run.sh`
+resolves the target from the local `azd` environment (`.azure/`, gitignored), so
+the suite always follows whichever env is currently selected. Export
+`KRATOS_FRONTEND_URL` / `KRATOS_BACKEND_URL` to override, e.g. in CI. If neither
+source provides them, the run fails fast instead of silently hitting a stale env.
+
+`KRATOS_USE_CASES` defaults to the deployment's **curated** personas (those with
+`curated: true`), because the frontend persona selector only exposes those —
+non-curated use-cases exist in the API but are intentionally hidden in the UI.
 
 ## Run it
 
@@ -53,7 +60,7 @@ point `KRATOS_*_URL` at a different env to retarget.
 cd .copilot/skills/e2e-smoke
 ./run.sh                                  # install (first run) + run all specs
 ./run.sh --grep "chat"                    # filter
-KRATOS_BACKEND_URL=... ./run.sh           # different env
+KRATOS_BACKEND_URL=... ./run.sh           # override the azd-resolved target
 SKIP_BROWSER=1 ./run.sh                   # API-only mode
 ```
 
