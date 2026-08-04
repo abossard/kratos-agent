@@ -102,6 +102,8 @@ PRINCIPALS_JSON="${PRINCIPALS_JSON}]"
 # ─── Apply the declarative Bicep role-assignment module ───
 echo ""
 echo "  Deploying ${ROLE_MODULE} (declarative role assignments)..."
+DEPLOY_ERR="$(mktemp)"
+trap 'rm -f "$DEPLOY_ERR"' EXIT
 if az deployment group create \
     --name "$DEPLOYMENT_NAME" \
     --subscription "$SUBSCRIPTION_ID" \
@@ -114,12 +116,21 @@ if az deployment group create \
         aiServicesName="$FOUNDRY_ACCOUNT" \
         keyVaultName="$KEY_VAULT_NAME" \
         storageAccountName="$STORAGE_ACCOUNT" \
-    --only-show-errors >/dev/null; then
+    --only-show-errors >/dev/null 2>"$DEPLOY_ERR"; then
   echo "   ✅ Hosted-agent role assignments applied."
   echo "      Data-plane role propagation can take a few minutes before the"
   echo "      agent's first successful model / Cosmos / Search call."
+elif grep -q "RoleAssignmentExists" "$DEPLOY_ERR" && \
+     ! grep -qE '"code":\s*"(AuthorizationFailed|InvalidTemplate|InvalidTemplateDeployment|PrincipalNotFound|LinkedAuthorizationFailed)"' "$DEPLOY_ERR"; then
+  # ARM fails the whole deployment when a role assignment already exists, even
+  # though that is exactly the state we want. Re-running the hook (e.g. on every
+  # `azd deploy`) therefore "failed" while being fully converged. Treat an
+  # exists-only failure as success so repeat deploys are genuinely idempotent,
+  # but still surface any real error such as a missing permission.
+  echo "   ✅ Hosted-agent role assignments already in place (nothing to do)."
 else
   echo "   ⚠️  Role-assignment deployment failed."
   echo "      Verify the deploying principal has Owner or User Access Administrator."
+  sed -n '1,20p' "$DEPLOY_ERR" | sed 's/^/      /'
   exit 0
 fi

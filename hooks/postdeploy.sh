@@ -42,6 +42,18 @@ echo ""
 if [[ "${KRATOS_AUTO_UPLOAD_USE_CASES:-0}" == "1" ]]; then
   echo "🤖 KRATOS_AUTO_UPLOAD_USE_CASES=1 set — uploading ALL use-cases non-interactively."
   SELECTION="A"
+elif [ ! -t 0 ]; then
+  # No TTY (CI, `azd deploy --no-prompt`, piped shell). `read` would fail here
+  # and take the whole deploy down with it, so choose a side rather than
+  # prompting. Skip instead of uploading: an unattended run should not push
+  # every use-case's assets to blob storage without being asked, and the
+  # storage account may be private-endpoint only (unreachable from a
+  # GitHub-hosted runner), which would fail the deploy anyway.
+  echo "⚠️  No TTY detected — skipping skills upload."
+  echo "    To upload non-interactively, set KRATOS_AUTO_UPLOAD_USE_CASES=1."
+  echo "    Note: that requires network access to '$STORAGE_ACCOUNT' (private"
+  echo "    endpoint / allow-listed IP), otherwise the upload will fail."
+  exit 0
 else
   echo "Available use-cases:"
   echo ""
