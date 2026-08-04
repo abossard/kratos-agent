@@ -33,6 +33,13 @@ updates:
       obo-security:
         applies-to: security-updates
         patterns: ["*"]
+      # requirements.txt here is a FULL lock (every transitive dep pinned
+      # exactly), and pydantic pins pydantic-core to an exact version. Bumping
+      # them separately produces an unresolvable file — this actually shipped
+      # once and broke the image build. Keep them in one PR. Listed before
+      # obo-minor-patch because a dependency joins the FIRST group it matches.
+      pydantic:
+        patterns: ["pydantic", "pydantic-core", "pydantic_core", "pydantic-settings"]
       obo-minor-patch:
         applies-to: version-updates
         update-types: [minor, patch]
