@@ -97,6 +97,20 @@ jobs:
       - name: Build backend Docker image
         run: docker build -f src/backend/Dockerfile -t kratos-agent-service:${{ github.sha }} .
 
+      # The other two images are built here too, because CI used to build only
+      # the backend. That let a dependency update land on main with a
+      # requirements.txt that could not be resolved at all (pydantic pinned
+      # pydantic-core to a version the pinned pydantic did not accept), and
+      # nothing caught it until a real deploy failed. Building every image is
+      # what makes that class of break visible before it merges.
+      - name: Build hosted-agent Docker image
+        run: docker build -f src/hosted-agent/Dockerfile -t kratos-hosted-agent:${{ github.sha }} .
+
+      # Context is the service directory: this Dockerfile copies requirements.txt
+      # relative to itself, not from the repo root (matches azure.yaml).
+      - name: Build obo-mcp-server Docker image
+        run: docker build -f src/obo-mcp-server/Dockerfile -t kratos-obo-mcp-server:${{ github.sha }} src/obo-mcp-server
+
       # Build frontend
       - name: Set up Node.js
         uses: actions/setup-node@v7
