@@ -105,6 +105,11 @@ Gotchas that have bitten before:
   output, which silently ate the skills menu and its prompt. Questions belong
   in `hooks/select-use-cases.sh` at preprovision, before that table starts;
   `hooks/postdeploy.sh` reads the answer and never prompts.
+  Two mechanisms enforce that, so don't drop either: `azure.yaml` passes
+  `--from-deploy`, which disables prompting in the script outright, and the
+  `postdeploy` hook is deliberately **not** `interactive`, so azd hands it no
+  terminal to read from. Run `./hooks/postdeploy.sh` by hand (no flag) and the
+  menu comes back.
 - Never use `|| true` on a test that is meant to gate a release.
 
 ## Container images build in ACR, not locally

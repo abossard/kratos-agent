@@ -5,6 +5,13 @@ CONTAINER_NAME="skills"
 STORAGE_ACCOUNT="${AZURE_BLOB_STORAGE_ACCOUNT_NAME:-}"
 USE_CASES_DIR="use-cases"
 
+# azd passes --from-deploy. A deploy must never stop and wait for input at the
+# end, so that flag makes prompting impossible no matter what state anything
+# else is in; the answer must have been given up front by
+# hooks/select-use-cases.sh. Run this script by hand and you get the menu.
+FROM_DEPLOY=0
+[ "${1:-}" = "--from-deploy" ] && FROM_DEPLOY=1
+
 # Written by hooks/select-use-cases.sh at preprovision time. See that file for
 # why the question is asked up front instead of here.
 SELECTION_FILE=".azure/${AZURE_ENV_NAME:-default}/kratos-upload-selection"
@@ -59,13 +66,19 @@ elif [ -z "$SELECTION" ] && [ "${KRATOS_AUTO_UPLOAD_USE_CASES:-0}" = "1" ]; then
 fi
 
 if [ -z "$SELECTION" ]; then
-  if [ -t 0 ] && [ -r /dev/tty ]; then
+  if [ "$FROM_DEPLOY" = "1" ]; then
+    # Either preprovision never ran (a bare `azd deploy` has no provision
+    # phase) or its answer went missing. Say so rather than prompting —
+    # prompting here is exactly the behaviour this hook exists to avoid.
+    echo "ℹ️  No skills selection was recorded, so nothing was uploaded."
+    echo "    (expected a file at $SELECTION_FILE)"
+    echo "    To upload now:  ./hooks/postdeploy.sh"
+    exit 0
+  elif [ -t 0 ] && [ -r /dev/tty ]; then
     # Run by hand from a real terminal: azd is not painting over anything, so
     # asking here is safe. This is the supported way to upload after the fact.
     SELECTION="ask"
   else
-    # Reached when postdeploy runs without the selector, e.g. a bare
-    # `azd deploy`, which has no preprovision phase.
     echo "ℹ️  No skills upload was requested, so nothing was uploaded."
     echo "    To choose interactively now:  ./hooks/postdeploy.sh"
     echo "    Or non-interactively:         KRATOS_UPLOAD_USE_CASES=all ./hooks/postdeploy.sh"

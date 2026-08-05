@@ -945,6 +945,10 @@ menu lost its last options and the prompt itself, so you were answering a
 question you could not see. `hooks/select-use-cases.sh` runs before that table
 starts; `hooks/postdeploy.sh` then uploads without prompting.
 
+A deploy will never stop and wait for you at the end: `azd` invokes the hook
+with `--from-deploy`, which disables prompting entirely. If no answer was
+recorded, it says so and uploads nothing rather than asking.
+
 Press Enter to skip — nothing is uploaded unless you ask for it.
 
 To choose without being prompted:
