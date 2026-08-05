@@ -111,6 +111,16 @@ Gotchas that have bitten before:
   terminal to read from. Run `./hooks/postdeploy.sh` by hand (no flag) and the
   menu comes back.
 - Never use `|| true` on a test that is meant to gate a release.
+- Entra directory operations are not Azure RBAC. Granting admin consent
+  (`oauth2PermissionGrants` with `AllPrincipals`) needs a directory role —
+  Global Administrator, Privileged Role Administrator, or Cloud Application
+  Administrator — which subscription Owner does **not** confer. It lived in
+  `infra/modules/obo-entra-app.bicep` and failed the whole provision with a bare
+  `Authorization_RequestDenied` for anyone whose tenant admin-gates consent.
+  Bicep cannot continue past a forbidden resource, so it now lives in
+  `hooks/grant-obo-consent.sh` (postprovision, best-effort). Keep privileged
+  directory writes out of Bicep for this reason — the app registration may still
+  *request* permissions declaratively, which needs no special rights.
 
 ## Container images build in ACR, not locally
 

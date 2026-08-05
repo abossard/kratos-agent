@@ -139,6 +139,11 @@ hooks:
                 fi
             fi
             echo "Post-provisioning: configuring services..."
+            # Tenant-wide admin consent for the OBO server app's Graph User.Read.
+            # Lives here rather than in Bicep because it needs an Entra directory
+            # role that most deployers do not have, and Bicep cannot continue past
+            # a forbidden resource. Best-effort: never blocks the deploy.
+            ./hooks/grant-obo-consent.sh || echo "⚠️  OBO admin consent step had issues (see above); continuing."
             echo "Deployment complete."
     predeploy:
         name: predeploy

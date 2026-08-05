@@ -757,6 +757,7 @@ kratos-agent/
 │
 └── hooks/
     ├── assign-agent-roles.sh       # Grants the hosted agent its data-plane roles
+    ├── grant-obo-consent.sh        # Admin-consents the OBO app's Graph permission
     ├── postdeploy.sh               # Uploads the selected skills after deploy
     └── select-use-cases.sh         # Asks which skills to upload (runs first)
 ```
@@ -933,6 +934,39 @@ done
 ```
 
 RBAC propagation takes 5–15 min. Re-run the e2e-smoke skill to confirm.
+
+### `Authorization_RequestDenied` on the OBO Entra app
+
+Only relevant when `DEPLOY_OBO=true`.
+
+The OBO server app needs delegated Microsoft Graph `User.Read`. *Requesting*
+that permission is declarative and needs no special rights — it is part of the
+app registration in `infra/modules/obo-entra-app.bicep`. *Granting* it is a
+separate, privileged operation: a tenant-wide consent (`AllPrincipals`) on
+behalf of every user in the directory.
+
+Granting requires an **Entra ID directory role** — Global Administrator,
+Privileged Role Administrator, or Cloud Application Administrator. Azure RBAC
+does not include it, so being subscription **Owner** is not enough. This trips
+people up because every other part of the deploy is pure Azure RBAC.
+
+The consent therefore lives in `hooks/grant-obo-consent.sh` at postprovision
+rather than in Bicep: Bicep cannot continue past a forbidden resource, so a
+consent it was not allowed to make failed the entire provision with a bare
+`Authorization_RequestDenied` and no clue that the cause was a directory role.
+The hook attempts the grant, and if it is refused it says so and lets the
+deployment finish.
+
+**Nothing is broken if the grant is skipped.** OBO still works — the first user
+to sign in is asked to consent to `User.Read` themselves. To grant it once,
+an administrator runs:
+
+```bash
+az ad app permission admin-consent --id "$(azd env get-value OBO_SERVER_APP_CLIENT_ID)"
+```
+
+...or opens the app registration in the portal → **API permissions** →
+**Grant admin consent**.
 
 ### Choosing which skills get uploaded
 

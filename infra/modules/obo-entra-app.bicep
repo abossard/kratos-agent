@@ -138,20 +138,21 @@ resource federatedIdentityCredential 'Microsoft.Graph/applications/federatedIden
   subject: acaManagedIdentityObjectId
 }
 
-// Microsoft Graph service principal (always exists in the tenant) — referenced
-// so we can pre-grant admin consent for the delegated User.Read permission.
-resource msGraphServicePrincipal 'Microsoft.Graph/servicePrincipals@v1.0' existing = {
-  appId: msGraphAppId
-}
-
-// Admin consent for the server app's delegated Graph User.Read, granted at
-// deploy time so OBO works non-interactively without a manual consent step.
-resource graphAdminConsent 'Microsoft.Graph/oauth2PermissionGrants@v1.0' = if (isServer) {
-  clientId: servicePrincipal.id
-  consentType: 'AllPrincipals'
-  resourceId: msGraphServicePrincipal.id
-  scope: 'User.Read'
-}
+// NOTE: admin consent for the delegated Graph `User.Read` above is deliberately
+// NOT granted here. An `oauth2PermissionGrants` with consentType `AllPrincipals`
+// is a tenant-wide consent, which Graph refuses unless the deploying principal
+// holds an Entra directory role (Global Administrator, Privileged Role
+// Administrator, or Cloud Application Administrator). Azure RBAC — even
+// subscription Owner — grants nothing in the directory.
+//
+// Bicep has no way to attempt a resource and continue when it is forbidden, so
+// keeping the grant here made the whole provision fail with a raw
+// `Authorization_RequestDenied` for anyone deploying into a tenant where consent
+// is admin-gated (the default in most corporate tenants). The app registration
+// still *requests* the permission above — that part needs no special rights.
+//
+// The grant itself now happens in hooks/grant-obo-consent.sh at postprovision,
+// where it can fail softly and explain what to ask an administrator for.
 
 output entraAppClientId string = entraApp.appId
 output entraAppObjectId string = entraApp.id
