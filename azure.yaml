@@ -148,4 +148,10 @@ hooks:
         name: preprovision
         kind: sh
         shell: sh
-        run: echo "Provisioning Azure resources..."
+        # Ask which skills to upload here, at the very start, rather than at
+        # upload time. azd repaints its progress table over anything a hook
+        # prints once the run is under way, which was swallowing the menu and
+        # the prompt. hooks/postdeploy.sh reads the answer and uploads without
+        # prompting.
+        run: ./hooks/select-use-cases.sh
+        interactive: true

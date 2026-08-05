@@ -756,7 +756,9 @@ kratos-agent/
 │   └── insurance/                  # Insurance agent
 │
 └── hooks/
-    └── postdeploy.sh               # Post-deployment configuration
+    ├── assign-agent-roles.sh       # Grants the hosted agent its data-plane roles
+    ├── postdeploy.sh               # Uploads the selected skills after deploy
+    └── select-use-cases.sh         # Asks which skills to upload (runs first)
 ```
 
 ---
@@ -932,18 +934,37 @@ done
 
 RBAC propagation takes 5–15 min. Re-run the e2e-smoke skill to confirm.
 
-### `hooks/postdeploy.sh` and non-interactive deploys
+### Choosing which skills get uploaded
 
-**Symptom:** `azd deploy` used to fail (or hang) at the postdeploy step, even though the app itself uploaded fine.
+`azd up` asks, right at the start, which use-cases to upload to blob storage.
+The answer is recorded and acted on after the deploy finishes.
 
-**Cause:** The script prompts for which use-cases to upload to blob storage. With no TTY the `read` fails under `set -e` and takes the whole deploy down with it.
+**Why it is asked up front:** `azd` paints a live progress table for the whole
+run and repaints over anything a hook prints. Asking at upload time meant the
+menu lost its last options and the prompt itself, so you were answering a
+question you could not see. `hooks/select-use-cases.sh` runs before that table
+starts; `hooks/postdeploy.sh` then uploads without prompting.
 
-**Fix:** The script now detects a missing TTY and skips the upload instead of failing. To upload non-interactively, set `KRATOS_AUTO_UPLOAD_USE_CASES=1` — it then uploads **all** use-cases. With a TTY and no flag you still get the interactive prompt.
+Press Enter to skip — nothing is uploaded unless you ask for it.
+
+To choose without being prompted:
 
 ```bash
-export KRATOS_AUTO_UPLOAD_USE_CASES=1
-azd up
+KRATOS_UPLOAD_USE_CASES=all azd up                      # every use-case
+KRATOS_UPLOAD_USE_CASES=retail-banking,insurance azd up # just these
+KRATOS_UPLOAD_USE_CASES=none azd up                     # skip
 ```
+
+To upload later, without redeploying, run the hook directly — that gives you
+the same menu, with nothing painting over it:
+
+```bash
+./hooks/postdeploy.sh
+```
+
+With no terminal at all (CI, `--no-prompt`, a piped shell) the upload is
+skipped rather than guessed at. The older `KRATOS_AUTO_UPLOAD_USE_CASES=1` is
+still honoured and means "all".
 
 > The skills storage account is provisioned with `publicNetworkAccess: Disabled`, so the upload only works from inside the VNet or from an allow-listed IP. Setting the flag on a GitHub-hosted runner will fail — which is why CI leaves it unset and the deploy workflow exposes it as an opt-in input.
 

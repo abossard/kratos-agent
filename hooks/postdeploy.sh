@@ -5,6 +5,10 @@ CONTAINER_NAME="skills"
 STORAGE_ACCOUNT="${AZURE_BLOB_STORAGE_ACCOUNT_NAME:-}"
 USE_CASES_DIR="use-cases"
 
+# Written by hooks/select-use-cases.sh at preprovision time. See that file for
+# why the question is asked up front instead of here.
+SELECTION_FILE=".azure/${AZURE_ENV_NAME:-default}/kratos-upload-selection"
+
 if [ -z "$STORAGE_ACCOUNT" ]; then
   echo "⚠️  AZURE_BLOB_STORAGE_ACCOUNT_NAME is not set. Skipping skills upload."
   exit 0
@@ -37,52 +41,68 @@ echo "║  Container:       $CONTAINER_NAME"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
 
-# Non-interactive mode: KRATOS_AUTO_UPLOAD_USE_CASES=1 uploads ALL use-cases
-# without prompting. Required for CI / non-TTY runs.
-if [[ "${KRATOS_AUTO_UPLOAD_USE_CASES:-0}" == "1" ]]; then
-  echo "🤖 KRATOS_AUTO_UPLOAD_USE_CASES=1 set — uploading ALL use-cases non-interactively."
-  SELECTION="A"
-elif [ ! -t 0 ]; then
-  # No TTY (CI, `azd deploy --no-prompt`, piped shell). `read` would fail here
-  # and take the whole deploy down with it, so choose a side rather than
-  # prompting. Skip instead of uploading: an unattended run should not push
-  # every use-case's assets to blob storage without being asked, and the
-  # storage account may be private-endpoint only (unreachable from a
-  # GitHub-hosted runner), which would fail the deploy anyway.
-  echo "⚠️  No TTY detected — skipping skills upload."
-  echo "    To upload non-interactively, set KRATOS_AUTO_UPLOAD_USE_CASES=1."
-  echo "    Note: that requires network access to '$STORAGE_ACCOUNT' (private"
-  echo "    endpoint / allow-listed IP), otherwise the upload will fail."
-  exit 0
-else
-  echo "Available use-cases:"
-  echo ""
-  for i in "${!USE_CASES[@]}"; do
-    echo "  $((i + 1)). ${USE_CASES[$i]}"
-  done
-  echo "  A. All use-cases"
-  echo "  S. Skip (do not upload)"
-  echo ""
-  read -r -p "Select use-case(s) to upload (number, A for all, S to skip): " SELECTION
+# Never prompt here. `azd up` repaints its progress table over whatever a hook
+# writes, which used to eat the menu's last lines and the prompt itself. The
+# choice is made by hooks/select-use-cases.sh before the deploy starts; this
+# hook just carries it out.
+SELECTION=""
+if [ -f "$SELECTION_FILE" ]; then
+  SELECTION="$(head -n 1 "$SELECTION_FILE" | tr -d '[:space:]')"
+  rm -f "$SELECTION_FILE" 2>/dev/null || true
 fi
 
-if [[ "$SELECTION" =~ ^[Ss]$ ]]; then
+# Direct env override, and the legacy flag, still work for scripted runs.
+if [ -n "${KRATOS_UPLOAD_USE_CASES:-}" ]; then
+  SELECTION="${KRATOS_UPLOAD_USE_CASES}"
+elif [ -z "$SELECTION" ] && [ "${KRATOS_AUTO_UPLOAD_USE_CASES:-0}" = "1" ]; then
+  SELECTION="all"
+fi
+
+if [ -z "$SELECTION" ]; then
+  if [ -t 0 ] && [ -r /dev/tty ]; then
+    # Run by hand from a real terminal: azd is not painting over anything, so
+    # asking here is safe. This is the supported way to upload after the fact.
+    SELECTION="ask"
+  else
+    # Reached when postdeploy runs without the selector, e.g. a bare
+    # `azd deploy`, which has no preprovision phase.
+    echo "ℹ️  No skills upload was requested, so nothing was uploaded."
+    echo "    To choose interactively now:  ./hooks/postdeploy.sh"
+    echo "    Or non-interactively:         KRATOS_UPLOAD_USE_CASES=all ./hooks/postdeploy.sh"
+    exit 0
+  fi
+fi
+
+# Running this script by hand is the supported way to get the menu, because
+# then azd is not painting over the terminal.
+if [ "$SELECTION" = "ask" ]; then
+  ./hooks/select-use-cases.sh
+  SELECTION="$(head -n 1 "$SELECTION_FILE" 2>/dev/null | tr -d '[:space:]')"
+  rm -f "$SELECTION_FILE" 2>/dev/null || true
+fi
+
+if [ -z "$SELECTION" ] || [ "$SELECTION" = "none" ]; then
   echo "Skipping skills upload."
   exit 0
 fi
 
 SELECTED=()
-if [[ "$SELECTION" =~ ^[Aa]$ ]]; then
+if [ "$SELECTION" = "all" ]; then
   SELECTED=("${USE_CASES[@]}")
 else
-  # Support comma-separated numbers like "1,3"
-  IFS=',' read -ra NUMS <<< "$SELECTION"
-  for num in "${NUMS[@]}"; do
-    num="$(echo "$num" | tr -d ' ')"
-    if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#USE_CASES[@]}" ]; then
-      SELECTED+=("${USE_CASES[$((num - 1))]}")
+  # A comma-separated list of use-case names, already resolved from whatever
+  # the user typed. Numbers are still accepted for anyone setting the env var
+  # by hand.
+  IFS=',' read -ra PARTS <<< "$SELECTION"
+  for part in "${PARTS[@]}"; do
+    part="$(printf '%s' "$part" | tr -d '[:space:]')"
+    [ -z "$part" ] && continue
+    if [[ "$part" =~ ^[0-9]+$ ]] && [ "$part" -ge 1 ] && [ "$part" -le "${#USE_CASES[@]}" ]; then
+      SELECTED+=("${USE_CASES[$((part - 1))]}")
+    elif [ -d "$USE_CASES_DIR/$part" ]; then
+      SELECTED+=("$part")
     else
-      echo "⚠️  Invalid selection: $num"
+      echo "⚠️  Unknown use-case: $part"
     fi
   done
 fi

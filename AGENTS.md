@@ -100,7 +100,11 @@ Gotchas that have bitten before:
   select`/`new` **and** `azd env refresh` to hydrate outputs first.
 - The skills blob storage account is `publicNetworkAccess: Disabled`, so
   `KRATOS_AUTO_UPLOAD_USE_CASES=1` cannot work from a GitHub-hosted runner.
-  `hooks/postdeploy.sh` skips the upload when there is no TTY.
+  `hooks/postdeploy.sh` skips the upload when nothing asked for it.
+- Hooks must not prompt mid-run. `azd` repaints its progress table over hook
+  output, which silently ate the skills menu and its prompt. Questions belong
+  in `hooks/select-use-cases.sh` at preprovision, before that table starts;
+  `hooks/postdeploy.sh` reads the answer and never prompts.
 - Never use `|| true` on a test that is meant to gate a release.
 
 ## Container images build in ACR, not locally
