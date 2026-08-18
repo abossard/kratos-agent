@@ -158,6 +158,42 @@ This single command:
 7. Configures all Managed Identity role assignments
 8. Outputs the public URL
 
+### Running Multiple Environments
+
+`azd` supports any number of side-by-side environments, so a throwaway experiment never has to share infrastructure with a live deployment. Each one lives in its own directory under `.azure/` (gitignored, so environments stay local and are never committed).
+
+```bash
+azd env list                          # show all environments; DEFAULT marks the active one
+azd env new <experiment-env>          # create a new one (becomes active immediately)
+azd env select <prod-env>             # switch back
+azd env get-value AZURE_ENV_NAME      # confirm which one is active right now
+```
+
+Environments are fully isolated. `infra/main.bicep` derives its resource token from
+`uniqueString(subscription().id, environmentName, location)` and deploys into `rg-<environmentName>`,
+so a second environment gets its own resource group and its own uniquely-named resources with no
+risk of collision.
+
+> [!WARNING]
+> `azd env select` sets a **global** default. `azd up`, `azd deploy`, `azd down` and the
+> `e2e-smoke` runner all silently follow whichever environment is active. Confirm with
+> `azd env get-value AZURE_ENV_NAME` before deploying or destroying anything, or bypass the
+> default entirely by naming the target per command: `azd deploy -e <experiment-env>`.
+> `-e` works on `up`, `deploy` and `down`, and is the safer habit once more than one
+> environment exists.
+
+The environment name is permanent in practice: it feeds both the resource group name and the
+resource-name hash, so renaming one means reprovisioning it from scratch.
+
+Per-environment settings are set with `azd env set` while that environment is active — for example
+`azd env set DEPLOY_OBO false` to skip the on-behalf-of stack in an experiment. Values set this way
+land in that environment's `.env` only, never in another's.
+
+If provisioning fails with `InsufficientResourcesAvailable` on AI Search, the region is out of
+Search capacity. Point just that one service elsewhere with
+`azd env set AZURE_SEARCH_LOCATION <region>` and reprovision; everything else stays in
+`AZURE_LOCATION`, and the private networking is unchanged.
+
 ### Register the Agent in Foundry (One-Time Manual Step)
 
 After `azd up`, register the agent in the Foundry portal so traces appear in the Operate tab:

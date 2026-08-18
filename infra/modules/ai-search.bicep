@@ -4,6 +4,9 @@ param name string
 @description('Location')
 param location string
 
+@description('Location for the private endpoint. Must match the region of the VNet that owns `subnetId`, because a private endpoint NIC is injected into that subnet. Defaults to `location`; set it explicitly when the Search service itself lives in a different region (Private Link supports cross-region targets).')
+param privateEndpointLocation string = location
+
 @description('Tags')
 param tags object = {}
 
@@ -35,7 +38,7 @@ resource aiSearch 'Microsoft.Search/searchServices@2023-11-01' = {
 
 resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-09-01' = {
   name: '${name}-pe'
-  location: location
+  location: privateEndpointLocation
   tags: tags
   properties: {
     subnet: {

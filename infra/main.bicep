@@ -46,6 +46,9 @@ param deployObo bool = true
 ])
 param staticWebAppLocation string = 'eastus2'
 
+@description('Optional override for the AI Search location. Empty (default) places it in the primary location, so existing deployments are unaffected. Set this (e.g. via AZURE_SEARCH_LOCATION) when the primary region has no Search capacity — Private Link supports cross-region private endpoints, so the VNet wiring is unchanged.')
+param aiSearchLocation string = ''
+
 // ─── Resource Naming ───
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
@@ -128,7 +131,8 @@ module aiSearch './modules/ai-search.bicep' = {
   scope: rg
   params: {
     name: !empty(aiSearchName) ? aiSearchName : '${namePrefix}${abbrs.searchSearchServices}${resourceToken}'
-    location: location
+    location: empty(aiSearchLocation) ? location : aiSearchLocation
+    privateEndpointLocation: location
     tags: tags
     subnetId: network.outputs.privateEndpointSubnetId
     vnetId: network.outputs.id
@@ -167,6 +171,8 @@ module blobStorage './modules/blob-storage.bicep' = {
     name: !empty(storageAccountName) ? storageAccountName : '${namePrefixNoHyphen}${abbrs.storageAccounts}${resourceToken}'
     location: location
     tags: tags
+    subnetId: network.outputs.privateEndpointSubnetId
+    vnetId: network.outputs.id
   }
 }
 

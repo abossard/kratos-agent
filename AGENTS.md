@@ -89,8 +89,9 @@ can succeed, because the target environment needs all of:
   `AZURE_SUBSCRIPTION_ID` (OIDC federated credential), and
 - already-provisioned infrastructure for that `azd` env.
 
-As of the last audit only the `kratos-agent-2` env is provisioned; the
-`staging` and `production` envs have no infra and no secrets.
+As of the last audit `kratos-agent-2` (prod) and `kratos-agent-exp`
+(experimentation) are provisioned locally; the `staging` and `production`
+GitHub envs have no infra and no secrets.
 
 Gotchas that have bitten before:
 
@@ -98,9 +99,34 @@ Gotchas that have bitten before:
   longer resolves. Use `v2.x`.
 - A fresh runner has no `.azure/` dir, so `azd deploy` needs `azd env
   select`/`new` **and** `azd env refresh` to hydrate outputs first.
-- The skills blob storage account is `publicNetworkAccess: Disabled`, so
-  `KRATOS_AUTO_UPLOAD_USE_CASES=1` cannot work from a GitHub-hosted runner.
-  `hooks/postdeploy.sh` skips the upload when nothing asked for it.
+- AI Search capacity in `eastus2` runs out (`InsufficientResourcesAvailable`
+  on both `basic` and `standard`), which fails the whole provision. Set
+  `AZURE_SEARCH_LOCATION` to a region that has capacity — the private endpoint
+  deliberately stays in the VNet's region, because a PE NIC is injected into
+  the VNet's subnet even when the service it targets is remote. Leave the
+  variable unset and Search follows `AZURE_LOCATION` as before.
+- The skills blob storage account is `publicNetworkAccess: Disabled`, and a
+  subscription policy re-applies that setting within seconds if you flip it —
+  `az storage account update --public-network-access Enabled` reports success
+  and then silently reverts. So the skills upload cannot run from *any* host
+  outside the VNet: not a GitHub-hosted runner, and not a developer laptop.
+  `hooks/postdeploy.sh` skips the upload when nothing asked for it, and fails
+  with `AuthorizationFailure` / "request may be blocked by network rules" when
+  something did. That error is a *network* denial, not a missing role — check
+  the private endpoint before touching RBAC.
+  `blob-storage.bicep` creates the blob private endpoint and the
+  `privatelink.blob.*` DNS zone, so anything inside the VNet can reach it. To
+  seed a fresh environment's skills, run the upload from a container app:
+
+  ```bash
+  # `script` supplies the PTY that `containerapp exec` requires
+  script -q /dev/null az containerapp exec -g <rg> -n <agent-app> \
+    --revision <running-revision> --command python
+  ```
+
+  Target the *running* revision explicitly — `azd provision` leaves a second,
+  briefly-activating revision behind, and exec against it fails with an opaque
+  `ClusterExecFailure ... code: 500`.
 - Hooks must not prompt mid-run. `azd` repaints its progress table over hook
   output, which silently ate the skills menu and its prompt. Questions belong
   in `hooks/select-use-cases.sh` at preprovision, before that table starts;
