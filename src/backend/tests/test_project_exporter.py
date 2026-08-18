@@ -352,8 +352,8 @@ def test_assemble_writes_windows_postdeploy_hook(exporter: ProjectExporter, tmp_
 def test_assemble_infra_has_no_private_networking(exporter: ProjectExporter, tmp_path: Path):
     """The demo export must NOT provision a VNet / private endpoints.
 
-    Regression test for the over-isolated export: Cosmos, Key Vault, and AI
-    Search used to ship with ``publicNetworkAccess: Disabled`` + private
+    Regression test for the over-isolated export: Cosmos and Key Vault
+    used to ship with ``publicNetworkAccess: Disabled`` + private
     endpoints + private DNS zones, behind a VNet. That is (a) excessive for a
     demo and (b) a correctness bug — a Foundry *hosted* agent isn't injected
     into the VNet, so it could not reach its own data plane after ``azd up``.
@@ -556,7 +556,7 @@ def test_assemble_azure_yaml_wires_app_insights(exporter: ProjectExporter, tmp_p
 
 
 def test_postdeploy_grants_dataplane_roles_to_instance_identity(exporter: ProjectExporter, tmp_path: Path):
-    """The hook must grant Cosmos + Blob + KV + Search data-plane roles.
+    """The hook must grant Cosmos + Blob + KV data-plane roles.
 
     The running container authenticates via ``DefaultAzureCredential`` as the
     Foundry *instance* identity. Bicep (role-assignments.bicep) grants the
@@ -575,7 +575,6 @@ def test_postdeploy_grants_dataplane_roles_to_instance_identity(exporter: Projec
     cosmos_data_contributor = "00000000-0000-0000-0000-000000000002"
     storage_blob_contributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
     kv_secrets_user = "4633458b-17de-408a-b874-0445c86b69e6"
-    search_index_contributor = "8ebe5a00-799e-43f5-93ac-243d3dce84a7"
 
     for content in (sh, ps):
         # Cosmos uses the data-plane SQL role API, not `az role assignment create`.
@@ -583,7 +582,8 @@ def test_postdeploy_grants_dataplane_roles_to_instance_identity(exporter: Projec
         assert cosmos_data_contributor in content
         assert storage_blob_contributor in content
         assert kv_secrets_user in content
-        assert search_index_contributor in content
+        # AI Search was removed from the template; the hook must not grant it.
+        assert "8ebe5a00-799e-43f5-93ac-243d3dce84a7" not in content
 
 
 def test_postdeploy_surfaces_real_grant_failures(exporter: ProjectExporter, tmp_path: Path):

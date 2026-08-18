@@ -21,7 +21,7 @@ ${slug}-agent/
 │   └── backend/app/          # Kratos backend modules (CopilotAgent, SkillRegistry…)
 ├── use-cases/${use_case}/    # ONLY the chosen persona
 ├── mocks/                    # Bundled stdio MCP mock servers
-└── infra/                    # Bicep — AI Foundry + Cosmos + Search + Blob + KV + ACR
+└── infra/                    # Bicep — AI Foundry + Cosmos + Blob + KV + ACR
     ├── main.bicep
     ├── main.parameters.json
     └── modules/
@@ -36,7 +36,7 @@ Cosmos persistence.
 
 - [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) — installed and logged in
 - [Azure CLI (az)](https://learn.microsoft.com/cli/azure/install-azure-cli) — installed and logged in
-- An Azure subscription with quota for AI Foundry + Cosmos DB + AI Search
+- An Azure subscription with quota for AI Foundry + Cosmos DB
 - The `azd ai agents` extension:
   ```bash
   azd extension install azure.ai.agents
@@ -60,7 +60,7 @@ azd up
 > if you hit a deploy failure.
 
 `azd up`:
-1. **Provisions** the AI Foundry account/project, Cosmos DB, AI Search,
+1. **Provisions** the AI Foundry account/project, Cosmos DB,
    Blob Storage, Key Vault, App Insights, ACR + role assignments
 2. **Builds** the agent container via ACR remoteBuild
 3. **Registers** the hosted agent on the Foundry project via the
@@ -69,8 +69,8 @@ azd up
    `hooks/postdeploy.ps1` on Windows — azd picks the right one) to grant the
    data-plane roles (`AcrPull`, `Cognitive Services OpenAI User`,
    `Cognitive Services User`, `Foundry User`, plus `Cosmos DB Data Contributor`,
-   `Storage Blob Data Contributor`, `Key Vault Secrets User`, and
-   `Search Index Data Contributor`) to the hosted-agent's instance + blueprint
+   `Storage Blob Data Contributor`, and `Key Vault Secrets User`) to the
+   hosted-agent's instance + blueprint
    managed identities. The container runs **as the instance identity**, which
    Bicep can't grant (those identities are created by Foundry **after** Bicep
    provisioning), so the hook discovers them via `azd ai agent show` and runs

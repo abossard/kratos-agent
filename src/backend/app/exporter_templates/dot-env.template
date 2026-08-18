@@ -15,7 +15,6 @@ MODEL_DEPLOYMENT_NAME=gpt-4o-mini
 # COSMOS_DB_ENDPOINT=https://<cosmos-account>.documents.azure.com:443/
 # COSMOS_DB_DATABASE=kratos-agent-${slug}
 
-# Azure AI Search (Optional locally)
 
 # Key Vault (Optional locally)
 # KEY_VAULT_URI=https://<kv-name>.vault.azure.net/

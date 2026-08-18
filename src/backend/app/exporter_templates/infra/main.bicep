@@ -14,7 +14,7 @@
 //
 // The Foundry hosted-agent's system-assigned managed identity replaces the
 // Container App MI as the principal for all data-plane RBAC (Cosmos / KV /
-// AI Search / Blob / Foundry).
+// Blob / Foundry).
 
 targetScope = 'subscription'
 

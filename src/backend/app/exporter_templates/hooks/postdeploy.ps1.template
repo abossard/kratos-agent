@@ -88,7 +88,7 @@ if (-not $$AiAccountName) {
 }
 $$AcrId = "/subscriptions/$$Sub/resourceGroups/$$Rg/providers/Microsoft.ContainerRegistry/registries/$$AcrName"
 
-# Data-plane scopes. Bicep grants Cosmos/Blob/KV/Search data-plane roles only
+# Data-plane scopes. Bicep grants Cosmos/Blob/KV data-plane roles only
 # to the Foundry *account* MI — but the running container authenticates (via
 # DefaultAzureCredential) as the *instance* identity, so those grants don't
 # cover it. Resolve each resource's scope from the azd env outputs (account
@@ -185,7 +185,7 @@ foreach ($$Principal in @($$InstancePrincipal, $$BlueprintPrincipal)) {
     Invoke-RoleGrant -PrincipalId $$Principal -Role $$FoundryUserRole -Scope $$AiProjectId -Label "Foundry User"
 
     # App data-plane: the container reads/writes Cosmos (conversation history),
-    # syncs skills from Blob storage, queries Search indexes, and fetches Key
+    # syncs skills from Blob storage and fetches Key
     # Vault secrets — all as the instance identity, which Bicep does NOT grant.
     Invoke-CosmosRoleGrant -PrincipalId $$Principal
     Invoke-RoleGrant -PrincipalId $$Principal -Role $$StorageBlobDataContributorRole -Scope $$StorageId -Label "Storage Blob Data Contributor"
