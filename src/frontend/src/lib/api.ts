@@ -32,11 +32,15 @@ export async function streamAgentChat(
 
     // When OBO sign-in is configured, attach the user's MCP-scoped access token
     // so the hosted agent can call the OBO MCP server On-Behalf-Of the user.
-    // Best-effort: never block the chat if token acquisition fails.
+    // Silent-only (never interactive): an interactive acquisition here opens an
+    // MSAL popup, and a popup that is blocked or ignored leaves its promise
+    // pending forever, which would hang the send instead of failing. Signing in
+    // is the explicit job of the OBO sign-in button; until the user does that,
+    // the chat proceeds without a token.
     const authCfg = getAuthConfig();
     if (authCfg) {
       try {
-        const token = await getMcpAccessToken(true);
+        const token = await getMcpAccessToken(false);
         if (token) {
           payload.mcpAccessTokens = { [authCfg.mcpServerName]: token };
         }
