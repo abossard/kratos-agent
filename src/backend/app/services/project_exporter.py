@@ -34,16 +34,17 @@ ZIP layout
             ├── cosmos-db.bicep          ← vendored public-network copy
             ├── key-vault.bicep          ← vendored public-network copy
             ├── ai-search.bicep          ← vendored public-network copy
-            └── (5 others)               ← copied from Kratos infra/modules/
+            ├── blob-storage.bicep       ← vendored public-network copy
+            └── (4 others)               ← copied from Kratos infra/modules/
 
 The vendored Bicep lives under ``app/exporter_templates/infra/`` so it ships
-inside the wheel; the other 5 modules + abbreviations.json are read from the
+inside the wheel; the other 4 modules + abbreviations.json are read from the
 checkout via ``self.repo_root`` (defaults to cwd) to stay in sync with any
 Kratos infra changes. ``network`` is dropped entirely and ``cosmos-db`` /
-``key-vault`` / ``ai-search`` are vendored (not copied) because the demo
-export keeps those services publicly reachable instead of isolating them in a
-VNet behind private endpoints — a Foundry hosted agent isn't VNet-injected and
-could not otherwise reach its own data plane.
+``key-vault`` / ``ai-search`` / ``blob-storage`` are vendored (not copied)
+because the demo export keeps those services publicly reachable instead of
+isolating them in a VNet behind private endpoints — a Foundry hosted agent
+isn't VNet-injected and could not otherwise reach its own data plane.
 """
 
 from __future__ import annotations
@@ -142,26 +143,27 @@ _HOSTED_AGENT_VERBATIM: tuple[str, ...] = ("main.py", "pyproject.toml", "Dockerf
 # governs access) rather than provisioning a VNet + private endpoints, which a
 # Foundry hosted agent (not VNet-injected) can't reach anyway.
 #
-# ``cosmos-db``, ``key-vault``, and ``ai-search`` are NOT copied from Kratos:
-# the repo-root versions hard-code private networking, so the export ships
-# its own public-network variants (see ``_INFRA_MODULES_VENDORED`` below).
+# ``cosmos-db``, ``key-vault``, ``ai-search``, and ``blob-storage`` are NOT
+# copied from Kratos: the repo-root versions hard-code private networking, so
+# the export ships its own public-network variants (see
+# ``_INFRA_MODULES_VENDORED`` below).
 _INFRA_MODULES_FROM_KRATOS: tuple[str, ...] = (
     "log-analytics.bicep",
     "app-insights.bicep",
     "ai-services.bicep",
-    "blob-storage.bicep",
     "container-registry.bicep",
 )
 
 # Trimmed/diverged Bicep modules vendored from the templates package (inside
 # the wheel) instead of copied from the Kratos checkout. ``role-assignments``
-# drops the Container App principal; the three data-service modules drop
+# drops the Container App principal; the four data-service modules drop
 # private networking so the demo deploys without a VNet.
 _INFRA_MODULES_VENDORED: tuple[str, ...] = (
     "role-assignments.bicep",
     "cosmos-db.bicep",
     "key-vault.bicep",
     "ai-search.bicep",
+    "blob-storage.bicep",
 )
 
 
