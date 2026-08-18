@@ -28,8 +28,6 @@ template:
       value: $${FOUNDRY_MODEL_DEPLOYMENT}
     - name: COSMOS_DB_ENDPOINT
       value: $${AZURE_COSMOS_DB_ENDPOINT}
-    - name: AZURE_AI_SEARCH_ENDPOINT
-      value: $${AZURE_AI_SEARCH_ENDPOINT}
     - name: KEY_VAULT_URI
       value: $${AZURE_KEY_VAULT_URI}
     - name: BLOB_STORAGE_ENDPOINT

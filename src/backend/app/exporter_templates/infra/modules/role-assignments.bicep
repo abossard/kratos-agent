@@ -8,9 +8,6 @@
 @description('Cosmos DB account name')
 param cosmosDbAccountName string
 
-@description('AI Search service name')
-param aiSearchName string
-
 @description('Microsoft Foundry resource name')
 param aiServicesName string
 
@@ -38,8 +35,6 @@ param principalId string = ''
 // ─── Built-in Role Definition IDs ───
 var cosmosDbDataContributor = '00000000-0000-0000-0000-000000000002'
 var keyVaultSecretsUser = '4633458b-17de-408a-b874-0445c86b69e6'
-var searchIndexDataReader = '1407120a-92aa-4202-b7e9-c0e197c71c8f'
-var searchIndexDataContributor = '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
 var cognitiveServicesOpenAIUser = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
 var cognitiveServicesUser = 'a97b65f3-24c7-4388-baec-2e87135dc908'
 var storageBlobDataContributor = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
@@ -53,10 +48,6 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-02-15-preview' exi
 
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
   name: keyVaultName
-}
-
-resource aiSearch 'Microsoft.Search/searchServices@2023-11-01' existing = {
-  name: aiSearchName
 }
 
 resource aiServices 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
@@ -92,28 +83,6 @@ resource agentKeyVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   scope: keyVault
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUser)
-    principalId: aiServicesPrincipalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// ─── Foundry Hosted Agent → AI Search (Reader) ───
-resource agentSearchRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(aiSearch.id, aiServicesPrincipalId, searchIndexDataReader)
-  scope: aiSearch
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchIndexDataReader)
-    principalId: aiServicesPrincipalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// ─── Foundry Hosted Agent → AI Search (Contributor — for ingestion) ───
-resource agentSearchContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(aiSearch.id, aiServicesPrincipalId, searchIndexDataContributor)
-  scope: aiSearch
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchIndexDataContributor)
     principalId: aiServicesPrincipalId
     principalType: 'ServicePrincipal'
   }
@@ -239,17 +208,6 @@ resource userStorageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
   scope: storageAccount
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributor)
-    principalId: principalId
-    principalType: 'User'
-  }
-}
-
-// ─── Deploying User → AI Search (Contributor — for local data ingestion) ───
-resource userSearchContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
-  name: guid(aiSearch.id, principalId, searchIndexDataContributor)
-  scope: aiSearch
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchIndexDataContributor)
     principalId: principalId
     principalType: 'User'
   }

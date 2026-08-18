@@ -16,9 +16,6 @@
     },
     "deployObo": {
       "value": "${DEPLOY_OBO=true}"
-    },
-    "aiSearchLocation": {
-      "value": "${AZURE_SEARCH_LOCATION=}"
     }
   }
 }

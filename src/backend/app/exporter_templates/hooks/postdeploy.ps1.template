@@ -39,7 +39,6 @@ $$CognitiveUserRole       = "a97b65f3-24c7-4388-baec-2e87135dc908"  # Cognitive 
 $$FoundryUserRole         = "53ca6127-db72-4b80-b1b0-d745d6d5456d"  # Foundry User (formerly Azure AI User)
 $$StorageBlobDataContributorRole = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"  # Storage Blob Data Contributor
 $$KeyVaultSecretsUserRole        = "4633458b-17de-408a-b874-0445c86b69e6"  # Key Vault Secrets User
-$$SearchIndexDataContributorRole = "8ebe5a00-799e-43f5-93ac-243d3dce84a7"  # Search Index Data Contributor
 $$CosmosDataContributorRole      = "00000000-0000-0000-0000-000000000002"  # Cosmos DB Built-in Data Contributor (data-plane)
 
 # Discover the identities from `azd ai agent show` (JSON output).
@@ -97,10 +96,8 @@ $$AcrId = "/subscriptions/$$Sub/resourceGroups/$$Rg/providers/Microsoft.Containe
 $$StorageName = $$env:AZURE_BLOB_STORAGE_ACCOUNT_NAME
 $$CosmosName = if ($$env:AZURE_COSMOS_DB_ENDPOINT -match '^https?://([^.]+)\.') { $$Matches[1] } else { "" }
 $$KvName = if ($$env:AZURE_KEY_VAULT_URI -match '^https?://([^.]+)\.') { $$Matches[1] } else { "" }
-$$SearchName = if ($$env:AZURE_AI_SEARCH_ENDPOINT -match '^https?://([^.]+)\.') { $$Matches[1] } else { "" }
 $$StorageId = "/subscriptions/$$Sub/resourceGroups/$$Rg/providers/Microsoft.Storage/storageAccounts/$$StorageName"
 $$KvId = "/subscriptions/$$Sub/resourceGroups/$$Rg/providers/Microsoft.KeyVault/vaults/$$KvName"
-$$SearchId = "/subscriptions/$$Sub/resourceGroups/$$Rg/providers/Microsoft.Search/searchServices/$$SearchName"
 
 function Invoke-RoleGrant {
     param(
@@ -193,7 +190,6 @@ foreach ($$Principal in @($$InstancePrincipal, $$BlueprintPrincipal)) {
     Invoke-CosmosRoleGrant -PrincipalId $$Principal
     Invoke-RoleGrant -PrincipalId $$Principal -Role $$StorageBlobDataContributorRole -Scope $$StorageId -Label "Storage Blob Data Contributor"
     Invoke-RoleGrant -PrincipalId $$Principal -Role $$KeyVaultSecretsUserRole -Scope $$KvId -Label "Key Vault Secrets User"
-    Invoke-RoleGrant -PrincipalId $$Principal -Role $$SearchIndexDataContributorRole -Scope $$SearchId -Label "Search Index Data Contributor"
 }
 
 Write-Host ""

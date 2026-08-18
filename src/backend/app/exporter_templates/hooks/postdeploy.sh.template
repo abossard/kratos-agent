@@ -31,7 +31,6 @@ COGNITIVE_USER_ROLE='a97b65f3-24c7-4388-baec-2e87135dc908'                # Cogn
 FOUNDRY_USER_ROLE='53ca6127-db72-4b80-b1b0-d745d6d5456d'                  # Foundry User (formerly Azure AI User)
 STORAGE_BLOB_DATA_CONTRIBUTOR_ROLE='ba92f5b4-2d11-453d-a403-e96b0029c9fe' # Storage Blob Data Contributor
 KEY_VAULT_SECRETS_USER_ROLE='4633458b-17de-408a-b874-0445c86b69e6'        # Key Vault Secrets User
-SEARCH_INDEX_DATA_CONTRIBUTOR_ROLE='8ebe5a00-799e-43f5-93ac-243d3dce84a7' # Search Index Data Contributor
 COSMOS_DATA_CONTRIBUTOR_ROLE='00000000-0000-0000-0000-000000000002'       # Cosmos DB Built-in Data Contributor (data-plane)
 
 # Discover the identities from `azd ai agent show` (JSON output).
@@ -75,10 +74,8 @@ ACR_ID="/subscriptions/$$SUB/resourceGroups/$$RG/providers/Microsoft.ContainerRe
 STORAGE_NAME="$${AZURE_BLOB_STORAGE_ACCOUNT_NAME:-}"
 COSMOS_NAME="$$(echo "$${AZURE_COSMOS_DB_ENDPOINT:-}" | sed -E 's#^https?://([^.]+)\..*#\1#')"
 KV_NAME="$$(echo "$${AZURE_KEY_VAULT_URI:-}" | sed -E 's#^https?://([^.]+)\..*#\1#')"
-SEARCH_NAME="$$(echo "$${AZURE_AI_SEARCH_ENDPOINT:-}" | sed -E 's#^https?://([^.]+)\..*#\1#')"
 STORAGE_ID="/subscriptions/$$SUB/resourceGroups/$$RG/providers/Microsoft.Storage/storageAccounts/$$STORAGE_NAME"
 KV_ID="/subscriptions/$$SUB/resourceGroups/$$RG/providers/Microsoft.KeyVault/vaults/$$KV_NAME"
-SEARCH_ID="/subscriptions/$$SUB/resourceGroups/$$RG/providers/Microsoft.Search/searchServices/$$SEARCH_NAME"
 
 # Grant a control-plane RBAC role, surfacing *real* failures. Capturing the
 # command output lets us tell a harmless already-exists apart from a genuine
@@ -172,7 +169,6 @@ for PID in "$$INSTANCE_PID" "$$BLUEPRINT_PID"; do
     grant_cosmos "$$PID"
     grant "$$PID" "$$STORAGE_BLOB_DATA_CONTRIBUTOR_ROLE" "$$STORAGE_ID" "Storage Blob Data Contributor"
     grant "$$PID" "$$KEY_VAULT_SECRETS_USER_ROLE" "$$KV_ID" "Key Vault Secrets User"
-    grant "$$PID" "$$SEARCH_INDEX_DATA_CONTRIBUTOR_ROLE" "$$SEARCH_ID" "Search Index Data Contributor"
 done
 
 echo ""

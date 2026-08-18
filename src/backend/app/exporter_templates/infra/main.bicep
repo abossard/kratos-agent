@@ -33,7 +33,6 @@ param principalId string = ''
 // Optional overrides
 param containerRegistryName string = ''
 param cosmosDbAccountName string = ''
-param aiSearchName string = ''
 param aiServicesName string = ''
 param keyVaultName string = ''
 param appInsightsName string = ''
@@ -97,17 +96,6 @@ module cosmosDb './modules/cosmos-db.bicep' = {
   }
 }
 
-// ─── AI Search ───
-module aiSearch './modules/ai-search.bicep' = {
-  name: 'ai-search'
-  scope: rg
-  params: {
-    name: !empty(aiSearchName) ? aiSearchName : '${abbrs.searchSearchServices}${resourceToken}'
-    location: location
-    tags: tags
-  }
-}
-
 // ─── Microsoft Foundry ───
 module aiFoundry './modules/ai-services.bicep' = {
   name: 'ai-foundry'
@@ -151,7 +139,6 @@ module roleAssignments './modules/role-assignments.bicep' = {
   scope: rg
   params: {
     cosmosDbAccountName: cosmosDb.outputs.name
-    aiSearchName: aiSearch.outputs.name
     aiServicesName: aiFoundry.outputs.name
     aiServicesPrincipalId: aiFoundry.outputs.principalId
     aiServicesProjectPrincipalId: aiFoundry.outputs.projectPrincipalId
@@ -169,7 +156,6 @@ output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 output AZURE_COSMOS_DB_ENDPOINT string = cosmosDb.outputs.endpoint
-output AZURE_AI_SEARCH_ENDPOINT string = aiSearch.outputs.endpoint
 output AZURE_KEY_VAULT_URI string = keyVault.outputs.uri
 output AZURE_APP_INSIGHTS_CONNECTION_STRING string = appInsights.outputs.connectionString
 output AZURE_AI_ACCOUNT_NAME string = aiFoundry.outputs.name

@@ -108,7 +108,6 @@ The backend proxies all chat requests to the Foundry hosted agent via the Invoca
 | Hosted agent protocol | `azure-ai-agentserver-invocations` | ≥1.0.0b3 |
 | Database | Azure Cosmos DB (serverless) / SQLite (local) | — |
 | Blob storage | Azure Storage / Azurite (local) | — |
-| Search | Azure AI Search | — |
 | PDF rendering | Playwright Chromium | — |
 | Telemetry | OpenTelemetry + Azure Monitor Exporter | — |
 | Package manager | APM CLI (`apm-cli`) | ≥0.5.0 |
@@ -127,7 +126,7 @@ The backend proxies all chat requests to the Foundry hosted agent via the Invoca
 
 Azure services provisioned via `azd up`:
 
-> VNet · Container Apps Environment · Container Apps (backend proxy **+** OBO MCP server) · Container Registry · Static Web App · AI Services (Foundry — agent calls models **directly**, no APIM) · AI Search · Cosmos DB · Blob Storage · Key Vault · App Insights · Log Analytics · Bing Search · Entra OBO app registrations + user-assigned managed identity · RBAC Role Assignments
+> VNet · Container Apps Environment · Container Apps (backend proxy **+** OBO MCP server) · Container Registry · Static Web App · AI Services (Foundry — agent calls models **directly**, no APIM) · Cosmos DB · Blob Storage · Key Vault · App Insights · Log Analytics · Bing Search · Entra OBO app registrations + user-assigned managed identity · RBAC Role Assignments
 
 ---
 
@@ -188,11 +187,6 @@ resource-name hash, so renaming one means reprovisioning it from scratch.
 Per-environment settings are set with `azd env set` while that environment is active — for example
 `azd env set DEPLOY_OBO false` to skip the on-behalf-of stack in an experiment. Values set this way
 land in that environment's `.env` only, never in another's.
-
-If provisioning fails with `InsufficientResourcesAvailable` on AI Search, the region is out of
-Search capacity. Point just that one service elsewhere with
-`azd env set AZURE_SEARCH_LOCATION <region>` and reprovision; everything else stays in
-`AZURE_LOCATION`, and the private networking is unchanged.
 
 ### Register the Agent in Foundry (One-Time Manual Step)
 
@@ -696,7 +690,7 @@ python scripts/fetch_traces.py --conversation-id abc123
 |---------|---------------|
 | **Zero secrets in code** | All secrets in Key Vault, accessed via Managed Identity |
 | **Passwordless auth** | `ChainedTokenCredential` (ManagedIdentity → AzureCLI) for all service-to-service |
-| **Network isolation** | VNet with private endpoints for Cosmos DB, Key Vault, Blob Storage, AI Search |
+| **Network isolation** | VNet with private endpoints for Cosmos DB, Key Vault, Blob Storage |
 | **Identity** | Least-privilege RBAC role assignments per service identity |
 | **Content safety** | Foundry guardrails (prompt shields, jailbreak detection) |
 | **File serving** | Path traversal protection, MIME type allowlisting, safe filename validation |
@@ -728,7 +722,6 @@ kratos-agent/
 │       ├── obo-mcp-server.bicep    # Container App — Entra-protected OBO MCP server (graph-obo)
 │       ├── obo-entra-app.bicep     # Entra app registrations for the OBO API (server + client)
 │       ├── obo-identity.bicep      # User-assigned MI + federated credential (secret-less OBO)
-│       ├── ai-search.bicep         # Azure AI Search (RAG index)
 │       ├── cosmos-db.bicep         # Cosmos DB serverless (4 containers)
 │       ├── blob-storage.bicep      # Storage Account (skills, APM)
 │       ├── container-apps-env.bicep
@@ -879,7 +872,6 @@ VNet
                                   - Cosmos DB
                                   - Key Vault
                                   - Blob Storage
-                                  - AI Search
 ```
 
 ### Identity & RBAC
@@ -891,7 +883,6 @@ All service-to-service auth uses Managed Identity with least-privilege roles:
 | Container App | Cosmos DB Data Contributor | Cosmos DB account |
 | Container App | Storage Blob Data Contributor | Storage account |
 | Container App | Key Vault Secrets User | Key Vault |
-| Container App | Search Index Data Reader | AI Search |
 | AI Services | Storage Blob Data Contributor | Storage account |
 | Static Web App | — | Reads config.json injected at deploy |
 
@@ -904,7 +895,6 @@ All service-to-service auth uses Managed Identity with least-privilege roles:
 | Container Apps (consumption) | $0 – $50 |
 | Static Web Apps (free tier) | $0 |
 | Cosmos DB (serverless) | $5 – $25 |
-| AI Search (Basic) | ~$75 |
 | Key Vault | ~$1 |
 | Container Registry (Basic) | ~$5 |
 | Application Insights | $5 – $20 |

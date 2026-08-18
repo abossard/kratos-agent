@@ -35,7 +35,6 @@ SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
 PROJECT_ID="${AZURE_AI_PROJECT_ID:-}"            # .../accounts/<account>/projects/<project>
 COSMOS_ENDPOINT="${AZURE_COSMOS_DB_ENDPOINT:-}"  # https://<account>.documents.azure.com:443/
-SEARCH_ENDPOINT="${AZURE_AI_SEARCH_ENDPOINT:-}"  # https://<service>.search.windows.net
 STORAGE_ACCOUNT="${AZURE_BLOB_STORAGE_ACCOUNT_NAME:-}"
 KEY_VAULT_URI="${AZURE_KEY_VAULT_URI:-}"          # https://<vault>.vault.azure.net/
 
@@ -67,7 +66,7 @@ echo "  Foundry account : ${FOUNDRY_ACCOUNT}"
 echo "  Foundry project : ${FOUNDRY_PROJECT}"
 
 if [ -z "$FOUNDRY_ACCOUNT" ] || [ -z "$FOUNDRY_PROJECT" ] || [ -z "$COSMOS_NAME" ] \
-   || [ -z "$SEARCH_NAME" ] || [ -z "$KEY_VAULT_NAME" ] || [ -z "$STORAGE_ACCOUNT" ]; then
+   || [ -z "$KEY_VAULT_NAME" ] || [ -z "$STORAGE_ACCOUNT" ]; then
   echo "⚠️  Could not derive all resource names from the azd environment. Skipping."
   exit 0
 fi
@@ -112,14 +111,13 @@ if az deployment group create \
     --parameters \
         agentPrincipalIds="$PRINCIPALS_JSON" \
         cosmosDbAccountName="$COSMOS_NAME" \
-        aiSearchName="$SEARCH_NAME" \
         aiServicesName="$FOUNDRY_ACCOUNT" \
         keyVaultName="$KEY_VAULT_NAME" \
         storageAccountName="$STORAGE_ACCOUNT" \
     --only-show-errors >/dev/null 2>"$DEPLOY_ERR"; then
   echo "   ✅ Hosted-agent role assignments applied."
   echo "      Data-plane role propagation can take a few minutes before the"
-  echo "      agent's first successful model / Cosmos / Search call."
+  echo "      agent's first successful model / Cosmos call."
 elif grep -q "RoleAssignmentExists" "$DEPLOY_ERR" && \
      ! grep -qE '"code":\s*"(AuthorizationFailed|InvalidTemplate|InvalidTemplateDeployment|PrincipalNotFound|LinkedAuthorizationFailed)"' "$DEPLOY_ERR"; then
   # ARM fails the whole deployment when a role assignment already exists, even

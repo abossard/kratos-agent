@@ -16,7 +16,6 @@ param principalId string = ''
 param containerAppsEnvName string = ''
 param containerRegistryName string = ''
 param cosmosDbAccountName string = ''
-param aiSearchName string = ''
 param aiServicesName string = ''
 param bingSearchName string = ''
 param keyVaultName string = ''
@@ -45,9 +44,6 @@ param deployObo bool = true
   'eastasia'
 ])
 param staticWebAppLocation string = 'eastus2'
-
-@description('Optional override for the AI Search location. Empty (default) places it in the primary location, so existing deployments are unaffected. Set this (e.g. via AZURE_SEARCH_LOCATION) when the primary region has no Search capacity — Private Link supports cross-region private endpoints, so the VNet wiring is unchanged.')
-param aiSearchLocation string = ''
 
 // ─── Resource Naming ───
 var abbrs = loadJsonContent('./abbreviations.json')
@@ -125,20 +121,6 @@ module cosmosDb './modules/cosmos-db.bicep' = {
   }
 }
 
-// ─── AI Search ───
-module aiSearch './modules/ai-search.bicep' = {
-  name: 'ai-search'
-  scope: rg
-  params: {
-    name: !empty(aiSearchName) ? aiSearchName : '${namePrefix}${abbrs.searchSearchServices}${resourceToken}'
-    location: empty(aiSearchLocation) ? location : aiSearchLocation
-    privateEndpointLocation: location
-    tags: tags
-    subnetId: network.outputs.privateEndpointSubnetId
-    vnetId: network.outputs.id
-  }
-}
-
 // ─── Microsoft Foundry ───
 module aiFoundry './modules/ai-services.bicep' = {
   name: 'ai-foundry'
@@ -213,7 +195,6 @@ module agentService './modules/agent-service.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     appInsightsResourceId: appInsights.outputs.id
     cosmosDbEndpoint: cosmosDb.outputs.endpoint
-    aiSearchEndpoint: aiSearch.outputs.endpoint
     keyVaultUri: keyVault.outputs.uri
     foundryEndpoint: aiFoundry.outputs.endpoint
     foundryModelDeployment: aiFoundry.outputs.modelDeploymentName
@@ -306,7 +287,6 @@ module roleAssignments './modules/role-assignments.bicep' = {
   params: {
     agentServicePrincipalId: agentService.outputs.principalId
     cosmosDbAccountName: cosmosDb.outputs.name
-    aiSearchName: aiSearch.outputs.name
     aiServicesName: aiFoundry.outputs.name
     aiServicesPrincipalId: aiFoundry.outputs.principalId
     aiServicesProjectPrincipalId: aiFoundry.outputs.projectPrincipalId
@@ -324,7 +304,6 @@ output AZURE_CONTAINER_APPS_ENV_NAME string = containerAppsEnv.outputs.name
 output AZURE_CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 output AZURE_COSMOS_DB_ENDPOINT string = cosmosDb.outputs.endpoint
-output AZURE_AI_SEARCH_ENDPOINT string = aiSearch.outputs.endpoint
 output AZURE_KEY_VAULT_URI string = keyVault.outputs.uri
 output AZURE_APP_INSIGHTS_CONNECTION_STRING string = appInsights.outputs.connectionString
 output AZURE_STATIC_WEB_APP_URL string = staticWebApp.outputs.url

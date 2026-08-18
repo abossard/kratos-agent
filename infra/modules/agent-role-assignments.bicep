@@ -23,9 +23,6 @@ param agentPrincipalIds array
 @description('Cosmos DB account name')
 param cosmosDbAccountName string
 
-@description('AI Search service name')
-param aiSearchName string
-
 @description('Microsoft Foundry (AI Services) account name')
 param aiServicesName string
 
@@ -39,7 +36,6 @@ param storageAccountName string
 var cognitiveServicesOpenAIUser = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // model inference
 var cognitiveServicesUser = 'a97b65f3-24c7-4388-baec-2e87135dc908'       // Foundry agent runtime plane
 var storageBlobDataReader = '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'       // read skills from blob (read-only = least privilege)
-var searchIndexDataReader = '1407120a-92aa-4202-b7e9-c0e197c71c8f'       // RAG query (read-only)
 var keyVaultSecretsUser = '4633458b-17de-408a-b874-0445c86b69e6'         // read skill secrets
 var cosmosDbDataContributor = '00000000-0000-0000-0000-000000000002'     // conversation persistence (data plane; no read-only built-in suffices for writes)
 
@@ -50,10 +46,6 @@ resource aiServices 'Microsoft.CognitiveServices/accounts@2024-10-01' existing =
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
   name: storageAccountName
-}
-
-resource aiSearch 'Microsoft.Search/searchServices@2023-11-01' existing = {
-  name: aiSearchName
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
@@ -92,17 +84,6 @@ resource agentBlobReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
   scope: storageAccount
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataReader)
-    principalId: pid
-    principalType: 'ServicePrincipal'
-  }
-}]
-
-// ─── Agent identity → AI Search (RAG read) ───
-resource agentSearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for pid in agentPrincipalIds: {
-  name: guid(aiSearch.id, pid, searchIndexDataReader)
-  scope: aiSearch
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchIndexDataReader)
     principalId: pid
     principalType: 'ServicePrincipal'
   }

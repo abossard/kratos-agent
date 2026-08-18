@@ -99,12 +99,6 @@ Gotchas that have bitten before:
   longer resolves. Use `v2.x`.
 - A fresh runner has no `.azure/` dir, so `azd deploy` needs `azd env
   select`/`new` **and** `azd env refresh` to hydrate outputs first.
-- AI Search capacity in `eastus2` runs out (`InsufficientResourcesAvailable`
-  on both `basic` and `standard`), which fails the whole provision. Set
-  `AZURE_SEARCH_LOCATION` to a region that has capacity — the private endpoint
-  deliberately stays in the VNet's region, because a PE NIC is injected into
-  the VNet's subnet even when the service it targets is remote. Leave the
-  variable unset and Search follows `AZURE_LOCATION` as before.
 - The skills blob storage account is `publicNetworkAccess: Disabled`, and a
   subscription policy re-applies that setting within seconds if you flip it —
   `az storage account update --public-network-access Enabled` reports success

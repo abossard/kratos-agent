@@ -230,7 +230,6 @@ def test_assemble_writes_trimmed_infra(exporter: ProjectExporter, tmp_path: Path
         "app-insights.bicep",
         "key-vault.bicep",
         "cosmos-db.bicep",
-        "ai-search.bicep",
         "ai-services.bicep",
         "blob-storage.bicep",
         "container-registry.bicep",
@@ -389,10 +388,6 @@ def test_assemble_infra_has_no_private_networking(exporter: ProjectExporter, tmp
     key_vault = (modules_dir / "key-vault.bicep").read_text()
     assert "defaultAction: 'Deny'" not in key_vault, "Key Vault firewall must not deny public access in the demo export"
     assert "privatelink.vaultcore" not in key_vault
-
-    ai_search = (modules_dir / "ai-search.bicep").read_text()
-    assert "publicNetworkAccess: 'enabled'" in ai_search
-    assert "privatelink.search" not in ai_search
 
 
 def test_assemble_unknown_use_case_raises(exporter: ProjectExporter, tmp_path: Path):

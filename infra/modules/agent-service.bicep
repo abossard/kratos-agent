@@ -22,9 +22,6 @@ param appInsightsResourceId string = ''
 @description('Cosmos DB endpoint')
 param cosmosDbEndpoint string
 
-@description('AI Search endpoint')
-param aiSearchEndpoint string
-
 @description('Key Vault URI')
 param keyVaultUri string
 
@@ -128,7 +125,6 @@ resource agentService 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
             { name: 'APPLICATION_INSIGHTS_RESOURCE_ID', value: appInsightsResourceId }
             { name: 'COSMOS_DB_ENDPOINT', value: cosmosDbEndpoint }
-            { name: 'AZURE_AI_SEARCH_ENDPOINT', value: aiSearchEndpoint }
             { name: 'KEY_VAULT_URI', value: keyVaultUri }
             { name: 'FOUNDRY_ENDPOINT', value: foundryEndpoint }
             { name: 'FOUNDRY_MODEL_DEPLOYMENT', value: foundryModelDeployment }
