@@ -54,7 +54,6 @@ host_of() { printf '%s' "$1" | sed -E 's#^[a-zA-Z]+://([^/:]+).*#\1#'; }
 
 FOUNDRY_ACCOUNT="$(printf '%s' "$PROJECT_ID" | sed -nE 's#.*/accounts/([^/]+)/projects/.*#\1#p')"
 FOUNDRY_PROJECT="$(printf '%s' "$PROJECT_ID" | sed -nE 's#.*/projects/([^/]+).*#\1#p')"
-SEARCH_NAME="$(host_of "$SEARCH_ENDPOINT" | cut -d. -f1)"
 COSMOS_NAME="$(host_of "$COSMOS_ENDPOINT" | cut -d. -f1)"
 KEY_VAULT_NAME="$(host_of "$KEY_VAULT_URI" | cut -d. -f1)"
 

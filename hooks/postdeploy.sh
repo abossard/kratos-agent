@@ -125,6 +125,46 @@ if [ ${#SELECTED[@]} -eq 0 ]; then
   exit 0
 fi
 
+# The storage account is commonly unreachable from the machine running `azd up`:
+# it sits behind a private endpoint, and many subscriptions carry a policy that
+# forces `publicNetworkAccess: Disabled` (re-applying it within seconds if you
+# flip it). Azure Storage reports that denial as `AuthorizationFailure`, which
+# reads like an RBAC problem but is a *network* one.
+#
+# This upload is a convenience, not a requirement: the backend seeds the same
+# use-cases from the copy baked into its container image on startup, so the app
+# is fully functional either way. Probe once, explain clearly, and let the
+# deployment succeed rather than failing `azd up` over an optional step.
+PROBE_ERR="$(az storage blob list \
+  --account-name "$STORAGE_ACCOUNT" \
+  --container-name "$CONTAINER_NAME" \
+  --num-results 1 \
+  --auth-mode login \
+  --only-show-errors 2>&1 >/dev/null)" || {
+  echo ""
+  echo "⚠️  Storage account '$STORAGE_ACCOUNT' is not reachable from this machine,"
+  echo "    so the skills upload was skipped."
+  echo ""
+  if printf '%s' "$PROBE_ERR" | grep -qiE "AuthorizationFailure|network rule|not authorized|public access"; then
+    echo "    Cause: the account denies traffic from this network. It is reachable"
+    echo "    over its private endpoint from inside the VNet, and a subscription"
+    echo "    policy may also be forcing public access off."
+  else
+    echo "    Cause: $(printf '%s' "$PROBE_ERR" | head -1)"
+  fi
+  echo ""
+  echo "    This is not fatal. The backend seeds the same use-cases from its"
+  echo "    container image at startup, so the deployed app already has them."
+  echo "    Upload here only matters if you edit use-cases without redeploying."
+  echo ""
+  echo "    To upload anyway, run this from a machine on the VNet, or from the"
+  echo "    running backend container:"
+  echo "      az containerapp exec -g <resource-group> -n <agent-container-app> \\"
+  echo "        --revision <running-revision> --command /bin/bash"
+  exit 0
+}
+
+FAILED=()
 for use_case in "${SELECTED[@]}"; do
   LOCAL_PATH="$USE_CASES_DIR/$use_case"
   echo ""
@@ -157,17 +197,27 @@ for use_case in "${SELECTED[@]}"; do
   fi
 
   # Upload all files from the local use-case folder
-  az storage blob upload-batch \
+  if az storage blob upload-batch \
     --account-name "$STORAGE_ACCOUNT" \
     --destination "$CONTAINER_NAME" \
     --source "$LOCAL_PATH" \
     --destination-path "use-cases/$use_case" \
     --auth-mode login \
     --overwrite \
-    --only-show-errors
-
-  echo "   ✅ '$use_case' uploaded successfully."
+    --only-show-errors; then
+    echo "   ✅ '$use_case' uploaded successfully."
+  else
+    echo "   ⚠️  '$use_case' failed to upload."
+    FAILED+=("$use_case")
+  fi
 done
 
 echo ""
-echo "🎉 Skills upload complete."
+if [ ${#FAILED[@]} -eq 0 ]; then
+  echo "🎉 Skills upload complete."
+else
+  echo "⚠️  Skills upload finished with ${#FAILED[@]} failure(s): ${FAILED[*]}"
+  echo "    The deployed app still serves the copy baked into its container"
+  echo "    image, so this does not block the deployment. Re-run"
+  echo "    ./hooks/postdeploy.sh once the storage account is reachable."
+fi

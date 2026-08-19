@@ -53,7 +53,7 @@ param staticWebAppUrl string = ''
 // A User-Assigned Managed Identity is created for ACR access so that the
 // AcrPull role assignment exists BEFORE the Container App tries to validate
 // the registry config.  The System-Assigned identity is still used for all
-// other service-to-service RBAC (Cosmos, Key Vault, AI Search, etc.).
+// other service-to-service RBAC (Cosmos, Key Vault, etc.).
 
 var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 var acrName = replace(containerRegistryName, '-', '')
