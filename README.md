@@ -188,6 +188,34 @@ Per-environment settings are set with `azd env set` while that environment is ac
 `azd env set DEPLOY_OBO false` to skip the on-behalf-of stack in an experiment. Values set this way
 land in that environment's `.env` only, never in another's.
 
+#### Azure Monitor health model
+
+`infra/` can deploy an Azure Monitor health model (`Microsoft.CloudHealth/healthmodels`, preview) that
+models health as advisor (one entity per use case) → tool → downstream-service → Azure resource.
+
+The model is enabled by default (`DEPLOY_HEALTH_MODEL=true`). Set it to `false` to skip creating it:
+
+```bash
+azd env set DEPLOY_HEALTH_MODEL false
+```
+
+Prerequisites (one-time):
+
+```bash
+az provider register -n Microsoft.CloudHealth
+az extension add -n health-models
+```
+
+Region notes:
+
+- This is a preview resource and region-limited.
+- `healthModelLocation` defaults to `centralus`.
+- Supported regions are the ones returned by `az provider show -n Microsoft.CloudHealth`.
+- `eastus2` is not supported.
+- The health model can live in a different region than the monitored resources.
+
+`azd` and ARM deployments are incremental. On a fresh deployment with `DEPLOY_HEALTH_MODEL=false`, no health model is created. If a health model already exists, turning the flag off later does not delete it, and removing entities from topology input does not delete already-deployed entities. Delete the health model resource explicitly (or redeploy fresh) to reconcile.
+
 ### Register the Agent in Foundry (One-Time Manual Step)
 
 After `azd up`, register the agent in the Foundry portal so traces appear in the Operate tab:
